@@ -14,10 +14,11 @@ public class RFunction {
     private Map<String, Integer> reg2idx;
     private Long funAddr;
     private String funName;
+    private List<ReilBlock> blocks;
 
     public RFunction(ReilFunction function) {
         this.function = function;
-        List<ReilBlock> blocks = function.getGraph().getNodes();
+        blocks = function.getGraph().getNodes();
         funAddr = Long.MAX_VALUE;
         regs = new ArrayList<>();
         reg2idx = new HashMap<>();
@@ -62,5 +63,13 @@ public class RFunction {
 
     public Integer getRegIdx(String reg) {
         return reg2idx.get(reg);
+    }
+
+    public String getRegName(int idx) {
+        return regs.get(idx);
+    }
+
+    public List<ReilBlock> getBlocks() {
+        return blocks;
     }
 }

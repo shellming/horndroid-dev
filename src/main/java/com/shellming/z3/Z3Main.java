@@ -23,10 +23,60 @@ public class Z3Main {
 //        test7();
 //        Examples examples = new Examples();
 //        examples.quantifierExample3(ctx);
-//            test12();
-        Long a = 8L;
-        System.out.println(a << -4);
-        System.out.println(a >> 2);
+            test13();
+    }
+
+    // 一定要用 addRule，而不是 add
+    static void test13() {
+        BoolSort boolSort = ctx.getBoolSort();
+        Sort[] domain = new Sort[1];
+        domain[0] = boolSort;
+
+        FuncDecl fd0 = ctx.mkFuncDecl("f0", domain, boolSort);
+        FuncDecl fd1 = ctx.mkFuncDecl("f1", domain, boolSort);
+        FuncDecl fd2 = ctx.mkFuncDecl("f2", domain, boolSort);
+
+        Expr[] e0 = new Expr[1];
+        e0[0] = ctx.mkTrue();
+
+        Expr[] e1 = new Expr[1];
+//        e1[0] = ctx.mkConst("a", boolSort);
+        e1[0] = ctx.mkBound(0, boolSort);
+
+        BoolExpr r0 = (BoolExpr) fd0.apply(e0);
+//        BoolExpr r11 = (BoolExpr) fd0.apply(e1);
+        BoolExpr r01 = (BoolExpr) fd0.apply(e1);
+        BoolExpr r02 = (BoolExpr) fd1.apply(e1);
+
+        BoolExpr r11 = ctx.mkAnd(
+                (BoolExpr)fd1.apply(e1),
+                ctx.mkEq(
+                        ctx.mkBound(0, boolSort),
+                        ctx.mkTrue()
+                )
+        );
+        BoolExpr r12 = (BoolExpr) fd2.apply(e1);
+
+        Fixedpoint fixedpoint = ctx.mkFixedpoint();
+
+        fixedpoint.registerRelation(fd0);
+        fixedpoint.registerRelation(fd1);
+        fixedpoint.registerRelation(fd2);
+
+        fixedpoint.addRule(ctx.mkImplies(r11, r12), null);
+        fixedpoint.addRule(ctx.mkImplies(r01, r02), null);
+        fixedpoint.addRule(r0, null);
+
+        BoolExpr query = ctx.mkAnd(
+                (BoolExpr) fd2.apply(e1),
+                ctx.mkEq(
+                        ctx.mkBound(0, boolSort),
+//                        ctx.mkConst("a", boolSort),
+                        ctx.mkTrue()
+                )
+        );
+        System.out.println(fixedpoint.query(query));
+
     }
 
     static void test12() {
@@ -188,7 +238,7 @@ public class Z3Main {
         BoolExpr query = ctx.mkAnd(
                 (BoolExpr) fd3.apply(e1),
                 ctx.mkEq(
-                        ctx.mkBound(2, boolSort),
+                        ctx.mkBound(0, boolSort),
                         ctx.mkTrue()
                 )
         );

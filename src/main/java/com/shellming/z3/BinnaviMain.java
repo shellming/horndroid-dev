@@ -44,12 +44,11 @@ public class BinnaviMain {
         List<Module> modules = apiDatabase.getModules();
         for (Module module : modules) {
             module.load();
-            Map<String, String> addr2fun = new HashMap<String, String>();
+            Map<Long, String> addr2fun = new HashMap<Long, String>();
             List<Function> functions = module.getFunctions();
             for (Function f : functions) {
-                f.load();
                 Address address = f.getAddress();
-                addr2fun.put(address.toHexString() + "00", f.getName());
+                addr2fun.put(address.toLong() << 8, f.getName());
                 ReilFunction reilFunction = f.getReilCode();
                 System.out.println("function :" + f.getName());
 //                System.out.println("native code start:");
