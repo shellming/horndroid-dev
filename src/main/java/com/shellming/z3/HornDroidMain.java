@@ -5,6 +5,7 @@ import com.google.security.zynamics.binnavi.API.disassembly.Module;
 import com.google.security.zynamics.binnavi.API.reil.ReilFunction;
 import com.google.security.zynamics.binnavi.API.reil.ReilInstruction;
 import com.google.security.zynamics.binnavi.Database.Exceptions.*;
+import com.google.security.zynamics.binnavi.disassembly.INaviFunction;
 import com.google.security.zynamics.binnavi.disassembly.INaviModule;
 import com.google.security.zynamics.binnavi.disassembly.types.Section;
 import horndroid.options;
@@ -23,6 +24,8 @@ public class HornDroidMain {
         Module test = BinnaviUtil.getModuleByName("libnative-lib.so");
         Map<String, Function> funcs = BinnaviUtil.getNativeFuncs(test);
         Function func = funcs.get("Java_com_shellming_jninew_MainActivity_stringFromJNI");
+        INaviFunction naviFunc = func.getNative();
+
         if (func != null) {
             List<ReilInstruction> instructions = BinnaviUtil.getInstructions(func);
             for (ReilInstruction instruction : instructions) {

@@ -531,11 +531,42 @@ public class ReilInstructionAnalysis {
                         z3Engine.addRule(z3Engine.implies(h, b), null);
                         break;
                     }
+                    // 处理为0的情况，执行下一条语句
+                    h = z3Engine.and(
+                            engine.rPred(f, codeAddress, regUpdate, regUpdateL, regUpdateB, regNums),
+                            z3Engine.eq(
+                                    v1,
+                                    z3Engine.mkBitVector(0, size)
+                            )
+                    );
+                    b = engine.rPred(f, nextCode, regUpdate, regUpdateL, regUpdateB, regNums);
+                    z3Engine.addRule(z3Engine.implies(h, b), null);
+                    // 处理非0的情况，跳转到 jump 地址（在另外的函数中，需要做寄存器地址转换）
+                    h = z3Engine.and(
+                            engine.rPred(f, codeAddress, regUpdate, regUpdateL, regUpdateB, regNums),
+                            z3Engine.not(z3Engine.eq(
+                                    v1,
+                                    z3Engine.mkBitVector(0, size)
+                            ))
+                    );
+                    RFunction funTo = name2fun.get(funName);
+                    Map<Integer, BitVecExpr> newRegV = updateRegisterV(function, funTo, size);
+                    Map<Integer, BoolExpr> newRegL = updateRegisterL(function, funTo);
+                    Map<Integer, BoolExpr> newRegB = updateRegisterB(function, funTo);
+
+                    b = engine.rPred(f, jump, newRegV, newRegL, newRegB, funTo.getRegNums());
+                    z3Engine.addRule(z3Engine.implies(h, b), null);
+
                     // TODO 对 source、sink函数做额外处理
-                    // TODO 目标函数做寄存器关系映射
 
-                    // TODO 添加返回谓词
-
+                    BoolExpr subh = engine.rPred(f, codeAddress, regUpdate, regUpdateL, regUpdateB, regNums);
+                    h = z3Engine.and(
+                            subh,
+                            engine.resPred(funName, newRegV, newRegL, newRegB, funTo.getRegNums())
+                    );
+                    b = engine.rPred(f, nextCode, regUpdate, regUpdateL, regUpdateB, regNums);
+                    z3Engine.addRule(z3Engine.implies(h, b), null);
+                    break;
                 }
 //                regUpdateL.put(idx3,
 //                        l1
@@ -544,19 +575,79 @@ public class ReilInstructionAnalysis {
 //                z3Engine.addRule(z3Engine.implies(h, b), null);
 //                engine.setRegSimVal(op3.toString(), null);
                 break;
+            case "str":
+                h = engine.rPred(f, codeAddress, regUpdate, regUpdateL, regUpdateB, regNums);
+                // str 仅有两个操作数，op2 位 EMPTY，op1为寄存器或立即数，op3为寄存器
+                if (op1.getType() == OperandType.REGISTER) {
+                    v1 = var.getV(idx1);
+                    l1 = var.getL(idx1);
+                    simV1 = engine.getRegSimVal(op1.toString());
+                } else {
+                    v1 = z3Engine.mkBitVector(Long.valueOf(op1.getValue()), size);
+                    l1 = z3Engine.mkFalse();
+                    simV1 = Long.valueOf(op1.getValue());
+                }
+                regUpdate.put(idx3,
+                        v1
+                );
+                regUpdateL.put(idx3,
+                        l1
+                );
+                b = engine.rPred(f, nextCode, regUpdate, regUpdateL, regUpdateB, regNums);
+                z3Engine.addRule(z3Engine.implies(h, b), null);
+                if (simV1 != null) {
+                    engine.setRegSimVal(op3.toString(), simV1);
+                } else {
+                    engine.setRegSimVal(op3.toString(), null);
+                }
+                break;
         }
 
     }
 
-    public Map<Integer, BitVecExpr> updateRegisterV(RFunction from, RFunction to) {
+    public boolean isSink(RFunction function) {
+        return false;
+    }
+
+    public Map<Integer, BitVecExpr> updateRegisterV(RFunction from, RFunction to, int size) {
         Map<Integer, BitVecExpr> regUp = new HashMap<>();
         for (int i = 0; i < to.getRegNums(); i++) {
             String name = to.getRegName(i);
             Integer oldIdx = from.getRegIdx(name);
-            if (oldIdx == null) {
-
+            if (oldIdx != null) {
+                regUp.put(i, var.getV(oldIdx));
+            } else {
+                regUp.put(i, z3Engine.mkBitVector(0, size));
             }
         }
-        return null;
+        return regUp;
+    }
+
+    public Map<Integer, BoolExpr> updateRegisterL(RFunction from, RFunction to) {
+        Map<Integer, BoolExpr> regUp = new HashMap<>();
+        for (int i = 0; i < to.getRegNums(); i++) {
+            String name = to.getRegName(i);
+            Integer oldIdx = from.getRegIdx(name);
+            if (oldIdx != null) {
+                regUp.put(i, var.getL(oldIdx));
+            } else {
+                regUp.put(i, z3Engine.mkFalse());
+            }
+        }
+        return regUp;
+    }
+
+    public Map<Integer, BoolExpr> updateRegisterB(RFunction from, RFunction to) {
+        Map<Integer, BoolExpr> regUp = new HashMap<>();
+        for (int i = 0; i < to.getRegNums(); i++) {
+            String name = to.getRegName(i);
+            Integer oldIdx = from.getRegIdx(name);
+            if (oldIdx == null) {
+                regUp.put(i, var.getB(oldIdx));
+            } else {
+                regUp.put(i, z3Engine.mkFalse());
+            }
+        }
+        return regUp;
     }
 }

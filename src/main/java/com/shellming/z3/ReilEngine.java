@@ -17,6 +17,49 @@ public class ReilEngine {
     private Map<String, Long> regVal;
     private Map<Long, Long> stackVal;
 
+    public BoolExpr resPred(String f, final Map<Integer, BitVecExpr> rUp, final Map<Integer, BoolExpr> rUpL, final Map<Integer, BoolExpr> rUpB, final int size) {
+        try {
+            FuncDecl res = this.resPredDef(f, size);
+
+            Expr[] e = new Expr[3 * size];
+            for(int i = 0, j = size, k = 2*size; i < size; i++, j++, k++) {
+                e[i] = rUp.get(i);
+                if (e[i] == null) e[i] = var.getV(i);
+                e[j] = rUpL.get(i);
+                if (e[j] == null) e[j] = var.getL(i);
+                e[k] = rUpB.get(i);
+                if (e[k] == null) e[k] = var.getB(i);
+            }
+
+            return (BoolExpr) res.apply(e);
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Z3Engine Failed: resPred");
+        }
+    }
+
+    private FuncDecl resPredDef(String fun, int size) {
+        try {
+            BitVecSort bv64 = mContext.mkBitVecSort(bvSize);
+            BoolSort bool = mContext.mkBoolSort();
+
+            String funcName = "RES_" + fun;
+            Sort[] domains = new Sort[3 * size];
+            Arrays.fill(domains, 0, size, bv64);
+            Arrays.fill(domains, size, 3 * size, bool);
+            FuncDecl f = mContext.mkFuncDecl(funcName, domains, bool);
+
+            z3Engine.declareRel(f);
+//            Symbol[] symbols = new Symbol[]{mContext.mkSymbol("interval_relation"),
+//                                            mContext.mkSymbol("bound_relation")};
+//            mFixedPoint.setPredicateRepresentation(f, symbols);
+            return f;
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Z3Engine Failed: resPredDef");
+        }
+    }
+
     public BoolExpr rPred(String f, Long pc, final Map<Integer, BitVecExpr> rUp, final Map<Integer, BoolExpr> rUpL, final Map<Integer, BoolExpr> rUpB, final int size) {
         try {
             FuncDecl r = this.rPredDef(f, pc, size);
