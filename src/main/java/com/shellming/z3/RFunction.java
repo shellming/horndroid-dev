@@ -15,6 +15,15 @@ public class RFunction {
     private Long funAddr;
     private String funName;
     private List<ReilBlock> blocks;
+    private int paramNum;
+
+    public int getParamNum() {
+        return paramNum;
+    }
+
+    public void setParamNum(int paramNum) {
+        this.paramNum = paramNum;
+    }
 
     public RFunction(ReilFunction function) {
         this.function = function;

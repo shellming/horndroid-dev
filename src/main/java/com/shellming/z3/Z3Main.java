@@ -4,18 +4,25 @@ import com.microsoft.z3.*;
 import com.sun.org.apache.xpath.internal.operations.Bool;
 import z3.Z3Query;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by ruluo1992 on 10/30/2016.
  */
 public class Z3Main {
     private static Context ctx;
+    private static Context mContext;
     private static Solver solver;
 
     static {
         ctx = new Context(new HashMap<String, String>());
         solver = ctx.mkSolver();
+        mContext = ctx;
+        Global.setParameter("fixedpoint.engine", "pdr");
+//            Global.setParameter("fixedpoint.unbound_compressor", "false");
+        Global.setParameter("pp.bv-literals", "false");
     }
 
     public static void main(String[] args) throws Examples.TestFailedException {
@@ -23,7 +30,166 @@ public class Z3Main {
 //        test7();
 //        Examples examples = new Examples();
 //        examples.quantifierExample3(ctx);
-            test13();
+            test14();
+    }
+
+    private static void test14() {
+        int aHash = "a".hashCode();
+        int bHash = "b".hashCode();
+        int cHash = "c".hashCode();
+        FuncDecl rf1 = rPredDef(1);
+        BoolExpr r1 = rPred(1L);
+        FuncDecl rf2 = rPredDef(2);
+        BoolExpr r2 = rPred(2L);
+        FuncDecl rf3 = rPredDef(3);
+        BoolExpr r3 = rPred(3L);
+        FuncDecl rf4 = rPredDef(4);
+        BoolExpr r4 = rPred(4L);
+        FuncDecl af = regPreDef("a", 64);
+        BoolExpr ar = regPred("a", 64, null, null, null);
+        BoolExpr a1 = regPred("a", 64, ctx.mkBV(0, 64), ctx.mkFalse(), ctx.mkFalse());
+        BoolExpr a2 = regPred("a", 64, ctx.mkBV(0, 64), ctx.mkFalse(), ctx.mkTrue());
+        FuncDecl bf = regPreDef("b", 64);
+        BoolExpr br = regPred("b", 64, null, null, null);
+        BoolExpr b1 = regPred("b", 64, ctx.mkBV(1, 64), ctx.mkTrue(), ctx.mkFalse());
+        BoolExpr ba = regPred("b", 64, getV("a"), ctx.mkNot(getL("a")), ctx.mkNot(getB("a")));
+
+        FuncDecl cf = regPreDef("c", 64);
+        BoolExpr cr = regPred("c", 64, null, null, null);
+        BoolExpr c1 = regPred("c", 64, ctx.mkBV(1, 64), ctx.mkTrue(), ctx.mkFalse());
+        BoolExpr cab = regPred("c", 64, ctx.mkBVOR(getV("a"), getV("b")), ctx.mkOr(getL("a"), getL("b")), ctx.mkOr(getB("a"), getB("b")));
+
+
+        Fixedpoint fixedpoint = ctx.mkFixedpoint();
+        fixedpoint.registerRelation(rf1);
+        fixedpoint.registerRelation(rf2);
+        fixedpoint.registerRelation(af);
+        fixedpoint.registerRelation(bf);
+        fixedpoint.registerRelation(cf);
+        fixedpoint.registerRelation(rf3);
+        fixedpoint.registerRelation(rf4);
+        fixedpoint.registerRelation(rf4);
+        fixedpoint.registerRelation(rf4);
+        fixedpoint.registerRelation(rf4);
+        fixedpoint.registerRelation(rf4);
+
+
+        fixedpoint.addRule(ctx.mkImplies(r1, r2), null);
+        fixedpoint.addRule(ctx.mkImplies(r1, a2), null);
+        fixedpoint.addRule(ctx.mkImplies(ctx.mkAnd(
+                r2, ar
+        ), ba), null);
+        fixedpoint.addRule(ctx.mkImplies(r2, r3), null);
+//        fixedpoint.addRule(ctx.mkImplies());
+//        fixedpoint.addRule(ctx.mkImplies(r2, r3), null);
+        fixedpoint.addRule(r1, null);
+        fixedpoint.addRule(ctx.mkImplies(ctx.mkAnd(
+                r3, ar, br
+        ), cab), null);
+        fixedpoint.addRule(ctx.mkImplies(r3, r4), null);
+//        fixedpoint.addRule(a1, null);
+
+        BoolExpr query1 = ctx.mkAnd(
+                r4,
+                cr,
+                ctx.mkEq(
+                        ctx.mkBound(cHash + 1, ctx.mkBoolSort()),
+                        ctx.mkTrue()
+                )
+        );
+        System.out.println(fixedpoint.query(query1));
+
+        BoolExpr query2 = ctx.mkAnd(
+                r4,
+                cr,
+                ctx.mkEq(
+                        ctx.mkBound(cHash + 1, ctx.mkBoolSort()),
+                        ctx.mkFalse()
+                )
+        );
+        System.out.println(fixedpoint.query(query2));
+
+
+
+    }
+
+    public static BitVecExpr getV(String name){
+        BitVecSort bv = null;
+        try {
+//            if (i < 0) return ctx.mkBV(-1*i, bv64);
+            return (BitVecExpr) ctx.mkBound(100 * name.hashCode(), mContext.mkBitVecSort(64));
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("getV");
+        }
+    }
+
+    public static BoolExpr getL(String name){
+        try {
+            return (BoolExpr) ctx.mkBound(100 * name.hashCode() + 1, mContext.getBoolSort());
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("getL");
+        }
+    }
+
+    public static BoolExpr getB(String name){
+        try {
+            return (BoolExpr) ctx.mkBound(100 * name.hashCode() + 2, mContext.getBoolSort());
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("getB");
+        }
+    }
+
+    private static BoolExpr rPred(Long pc) {
+        try {
+            FuncDecl r = rPredDef(pc);
+            return (BoolExpr) r.apply(new Expr[0]);
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Z3Engine Failed: rPred");
+        }
+    }
+
+    private static BoolExpr regPred(String name, int size, BitVecExpr v, BoolExpr b, BoolExpr l) {
+        FuncDecl funcDecl = regPreDef(name, size);
+        BitVecExpr rv = v == null ? getV(name) : v;
+        BoolExpr rb = b == null ? getL(name) : b;
+        BoolExpr rl = l == null ? getB(name) : l;
+        return (BoolExpr) funcDecl.apply(rv, rb, rl);
+    }
+
+    private static FuncDecl regPreDef(String name, int size) {
+        try {
+            BoolSort bool = mContext.mkBoolSort();
+
+            String funcName = "REG_" + name;
+            Sort[] sorts = new Sort[3];
+            sorts[0] = mContext.mkBitVecSort(size);
+            sorts[1] = mContext.mkBoolSort();
+            sorts[2] = mContext.mkBoolSort();
+            FuncDecl fun = mContext.mkFuncDecl(funcName, sorts, mContext.mkBoolSort());
+//            z3Engine.declareRel(fun);
+            return fun;
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Z3Engine Failed: rPredDef");
+        }
+    }
+
+    private static FuncDecl rPredDef(long pc) {
+        try {
+            BoolSort bool = mContext.mkBoolSort();
+
+            String funcName = "R_" + pc;
+            FuncDecl fun = mContext.mkFuncDecl(funcName, new Sort[0], mContext.mkBoolSort());
+//            z3Engine.declareRel(fun);
+            return fun;
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Z3Engine Failed: rPredDef");
+        }
     }
 
     // 一定要用 addRule，而不是 add

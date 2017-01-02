@@ -14,23 +14,24 @@ public class ReilEngine {
     private int bvSize;
     private Z3Engine z3Engine;
     private ReilVariable var;
-    private Map<String, Long> regVal;
-    private Map<Long, Long> stackVal;
 
-    public BoolExpr resPred(String f, final Map<Integer, BitVecExpr> rUp, final Map<Integer, BoolExpr> rUpL, final Map<Integer, BoolExpr> rUpB, final int size) {
+    public BoolExpr sPred(BitVecExpr addr, BitVecExpr v3, BoolExpr v4, BoolExpr v5) {
         try {
-            FuncDecl res = this.resPredDef(f, size);
+            BitVecSort bv = mContext.mkBitVecSort(bvSize);
+            BoolSort bool = mContext.getBoolSort();
+            FuncDecl s = mContext.mkFuncDecl("S", new Sort[]{bv, bv, bool, bool}, bool);
+            z3Engine.declareRel(s);
+            return (BoolExpr) s.apply(addr, v3, v4, v5);
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Z3Engine Failed: sPred");
+        }
+    }
 
-            Expr[] e = new Expr[3 * size];
-            for(int i = 0, j = size, k = 2*size; i < size; i++, j++, k++) {
-                e[i] = rUp.get(i);
-                if (e[i] == null) e[i] = var.getV(i);
-                e[j] = rUpL.get(i);
-                if (e[j] == null) e[j] = var.getL(i);
-                e[k] = rUpB.get(i);
-                if (e[k] == null) e[k] = var.getB(i);
-            }
-
+    public BoolExpr resPred(String f) {
+        try {
+            FuncDecl res = this.resPredDef(f);
+            Expr[] e = new Expr[0];
             return (BoolExpr) res.apply(e);
         } catch (Z3Exception e) {
             e.printStackTrace();
@@ -38,16 +39,12 @@ public class ReilEngine {
         }
     }
 
-    private FuncDecl resPredDef(String fun, int size) {
+    private FuncDecl resPredDef(String fun) {
         try {
-            BitVecSort bv64 = mContext.mkBitVecSort(bvSize);
             BoolSort bool = mContext.mkBoolSort();
 
             String funcName = "RES_" + fun;
-            Sort[] domains = new Sort[3 * size];
-            Arrays.fill(domains, 0, size, bv64);
-            Arrays.fill(domains, size, 3 * size, bool);
-            FuncDecl f = mContext.mkFuncDecl(funcName, domains, bool);
+            FuncDecl f = mContext.mkFuncDecl(funcName, new Sort[0], bool);
 
             z3Engine.declareRel(f);
 //            Symbol[] symbols = new Symbol[]{mContext.mkSymbol("interval_relation"),
@@ -60,34 +57,23 @@ public class ReilEngine {
         }
     }
 
-    public BoolExpr rPred(String f, Long pc, final Map<Integer, BitVecExpr> rUp, final Map<Integer, BoolExpr> rUpL, final Map<Integer, BoolExpr> rUpB, final int size) {
-        try {
-            FuncDecl r = this.rPredDef(f, pc, size);
-
-            Expr[] e = new Expr[3 * size];
-            for(int i = 0, j = size, k = 2*size; i < size; i++, j++, k++){
-                e[i] = rUp.get(i); if (e[i] == null) e[i] = var.getV(i);
-                e[j] = rUpL.get(i); if (e[j] == null) e[j] = var.getL(i);
-                e[k] = rUpB.get(i); if (e[k] == null) e[k] = var.getB(i);
-            }
-
-            return (BoolExpr) r.apply(e);
-        } catch (Z3Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Z3Engine Failed: rPred");
-        }
+    public BoolExpr regPred(String regName, BitVecExpr v, BoolExpr b, BoolExpr l) {
+        FuncDecl funcDecl = regPreDef(regName);
+        int hash = regName.hashCode();
+        BitVecExpr rv = v == null ? var.getV(hash) : v;
+        BoolExpr rb = b == null ? var.getL(hash) : b;
+        BoolExpr rl = l == null ? var.getB(hash) : l;
+        return (BoolExpr) funcDecl.apply(rv, rb, rl);
     }
 
-    private FuncDecl rPredDef(String f, long pc, int size) {
+    public FuncDecl regPreDef(String name) {
         try {
-            BitVecSort bv64 = mContext.mkBitVecSort(bvSize);
-            BoolSort bool = mContext.mkBoolSort();
-
-            String funcName = "R_" + f + '_' + pc;
-            Sort[] domains = new Sort[3 * size];
-            Arrays.fill(domains, 0, size, bv64);
-            Arrays.fill(domains, size, 3 * size, bool);
-            FuncDecl fun = mContext.mkFuncDecl(funcName, domains, mContext.mkBoolSort());
+            String funcName = "REG_" + name;
+            Sort[] sorts = new Sort[3];
+            sorts[0] = mContext.mkBitVecSort(bvSize);
+            sorts[1] = mContext.mkBoolSort();
+            sorts[2] = mContext.mkBoolSort();
+            FuncDecl fun = mContext.mkFuncDecl(funcName, sorts, mContext.mkBoolSort());
             z3Engine.declareRel(fun);
             return fun;
         } catch (Z3Exception e) {
@@ -96,12 +82,27 @@ public class ReilEngine {
         }
     }
 
-    public Long getRegSimVal(String reg) {
-        return regVal.get(reg);
+    public BoolExpr rPred(String f, Long pc) {
+        try {
+            FuncDecl r = this.rPredDef(f, pc);
+            Expr[] e = new Expr[0];
+            return (BoolExpr) r.apply(e);
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Z3Engine Failed: rPred");
+        }
     }
 
-    public void setRegSimVal(String reg, Long val) {
-        regVal.put(reg, val);
+    private FuncDecl rPredDef(String f, long pc) {
+        try {
+            String funcName = "R_" + f + '_' + pc;
+            FuncDecl fun = mContext.mkFuncDecl(funcName, new Sort[0], mContext.mkBoolSort());
+            z3Engine.declareRel(fun);
+            return fun;
+        } catch (Z3Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Z3Engine Failed: rPredDef");
+        }
     }
 
     public Context getmContext() {
@@ -138,21 +139,5 @@ public class ReilEngine {
 
     public void setVar(ReilVariable var) {
         this.var = var;
-    }
-
-    public Map<String, Long> getRegVal() {
-        return regVal;
-    }
-
-    public void setRegVal(Map<String, Long> regVal) {
-        this.regVal = regVal;
-    }
-
-    public Map<Long, Long> getStackVal() {
-        return stackVal;
-    }
-
-    public void setStackVal(Map<Long, Long> stackVal) {
-        this.stackVal = stackVal;
     }
 }
