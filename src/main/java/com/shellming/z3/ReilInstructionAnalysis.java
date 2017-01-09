@@ -28,8 +28,9 @@ public class ReilInstructionAnalysis {
     final private Long nextCode;
     final private Map<Long, String> addr2fun;
     final private Map<String, RFunction> name2fun;
+    final private Boolean isReturn;
     public ReilInstructionAnalysis(ReilInstruction reilInstruction, RFunction function, ReilEngine engine, Long nextCode,
-                                   Map<Long, String> addr2fun, Map<String, RFunction> name2fun) {
+                                   Map<Long, String> addr2fun, Map<String, RFunction> name2fun, Boolean isReturn) {
         codeAddress = reilInstruction.getAddress().toLong();
         this.engine = engine;
         this.instruction = reilInstruction;
@@ -39,6 +40,7 @@ public class ReilInstructionAnalysis {
         this.nextCode = nextCode;
         this.addr2fun = addr2fun;
         this.name2fun = name2fun;
+        this.isReturn = isReturn;
     }
 
     public void createHornClauses() {
@@ -60,6 +62,16 @@ public class ReilInstructionAnalysis {
         int hash1, hash2, hash3;
         BoolExpr result;
         Long simV1, simV2, simV3;
+        if (isReturn) {
+            int hash = "r0".hashCode();
+            h = z3Engine.and(
+                    engine.regPred("r0", var.getV(hash), var.getL(hash), var.getB(hash)),
+                    engine.rPred(f, codeAddress)
+            );
+            b = engine.resPred(f, var.getV(hash), var.getL(hash), var.getB(hash));
+            z3Engine.addRule(z3Engine.implies(h, b), null);
+            return;
+        }
         switch (opcode) {
             case "add":
                 h = engine.rPred(f, codeAddress);
@@ -560,7 +572,7 @@ public class ReilInstructionAnalysis {
                         BoolExpr subh = engine.rPred(f, codeAddress);
                         h = z3Engine.and(
                                 subh,
-                                engine.resPred(funName)  // 返回谓词
+                                engine.resPred(funName, null, null, null)  // 返回谓词
                         );
                         b = engine.rPred(f, nextCode);
                         z3Engine.addRule(z3Engine.implies(h, b), null);

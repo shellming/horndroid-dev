@@ -16,6 +16,16 @@ public class RFunction {
     private String funName;
     private List<ReilBlock> blocks;
     private int paramNum;
+    private boolean isEntry;
+
+
+    public boolean isEntry() {
+        return isEntry;
+    }
+
+    public void setIsEntry(boolean isEntry) {
+        this.isEntry = isEntry;
+    }
 
     public int getParamNum() {
         return paramNum;

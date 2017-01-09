@@ -28,10 +28,10 @@ public class ReilEngine {
         }
     }
 
-    public BoolExpr resPred(String f) {
+    public BoolExpr resPred(String f, BitVecExpr v, BoolExpr l, BoolExpr b) {
         try {
             FuncDecl res = this.resPredDef(f);
-            Expr[] e = new Expr[0];
+            Expr[] e = new Expr[]{v, l, b};
             return (BoolExpr) res.apply(e);
         } catch (Z3Exception e) {
             e.printStackTrace();
@@ -42,9 +42,9 @@ public class ReilEngine {
     private FuncDecl resPredDef(String fun) {
         try {
             BoolSort bool = mContext.mkBoolSort();
-
+            BitVecSort bitVecSort = mContext.mkBitVecSort(bvSize);
             String funcName = "RES_" + fun;
-            FuncDecl f = mContext.mkFuncDecl(funcName, new Sort[0], bool);
+            FuncDecl f = mContext.mkFuncDecl(funcName, new Sort[]{bitVecSort, bool, bool}, bool);
 
             z3Engine.declareRel(f);
 //            Symbol[] symbols = new Symbol[]{mContext.mkSymbol("interval_relation"),
