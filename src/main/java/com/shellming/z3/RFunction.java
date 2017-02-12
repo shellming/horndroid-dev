@@ -1,6 +1,7 @@
 package com.shellming.z3;
 
 import com.google.security.zynamics.binnavi.API.disassembly.Address;
+import com.google.security.zynamics.binnavi.API.disassembly.Function;
 import com.google.security.zynamics.binnavi.API.reil.*;
 
 import java.util.*;
@@ -9,55 +10,16 @@ import java.util.*;
  * Created by ruluo1992 on 11/27/2016.
  */
 public class RFunction {
-    private ReilFunction function;
-    private List<String> regs;
-    private Map<String, Integer> reg2idx;
-    private Long funAddr;
+    private Function function;
     private String funName;
-    private List<ReilBlock> blocks;
-    private int paramNum;
-    private boolean isEntry;
 
-
-    public boolean isEntry() {
-        return isEntry;
-    }
-
-    public void setIsEntry(boolean isEntry) {
-        this.isEntry = isEntry;
-    }
-
-    public int getParamNum() {
-        return paramNum;
-    }
-
-    public void setParamNum(int paramNum) {
-        this.paramNum = paramNum;
-    }
-
-    public RFunction(ReilFunction function) {
+    public RFunction(Function function) {
         this.function = function;
-        blocks = function.getGraph().getNodes();
-        funAddr = Long.MAX_VALUE;
-        regs = new ArrayList<>();
-        reg2idx = new HashMap<>();
-        funName = function.getName();
+        this.funName = function.getName();
+    }
 
-        for (ReilBlock block : blocks) {
-            Address address = block.getAddress();
-            if (address.toLong() < funAddr) {
-                funAddr = address.toLong();
-            }
-            List<ReilInstruction> instructions = block.getInstructions();
-            for (ReilInstruction instruction : instructions) {
-                addReg(instruction.getFirstOperand(), regs);
-                addReg(instruction.getSecondOperand(), regs);
-                addReg(instruction.getThirdOperand(), regs);
-            }
-        }
-        for (int i = 0; i < regs.size(); i++) {
-            reg2idx.put(regs.get(i), i);
-        }
+    public String getFunName() {
+        return funName;
     }
 
     private void addReg(ReilOperand operand, List<String> regs) {
@@ -68,27 +30,8 @@ public class RFunction {
         }
     }
 
-    public String getFunName() {
-        return funName;
+    public int getParamNum() {
+        return 1;
     }
 
-    public void setFunName(String funName) {
-        this.funName = funName;
-    }
-
-    public int getRegNums() {
-        return regs.size();
-    }
-
-    public Integer getRegIdx(String reg) {
-        return reg2idx.get(reg);
-    }
-
-    public String getRegName(int idx) {
-        return regs.get(idx);
-    }
-
-    public List<ReilBlock> getBlocks() {
-        return blocks;
-    }
 }

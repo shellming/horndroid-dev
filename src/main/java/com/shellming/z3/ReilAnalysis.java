@@ -14,9 +14,9 @@ public class ReilAnalysis {
     }
 
     public void processFunction(RFunction function, boolean isEntry) {
-        List<ReilBlock> blocks = function.getBlocks();
-        for (ReilBlock block : blocks) {
-
-        }
+//        List<ReilBlock> blocks = function.getBlocks();
+//        for (ReilBlock block : blocks) {
+//
+//        }
     }
 }

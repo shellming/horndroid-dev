@@ -15,6 +15,13 @@ public class ReilEngine {
     private Z3Engine z3Engine;
     private ReilVariable var;
 
+    public ReilEngine(Context mContext, int bvSize, Z3Engine z3Engine, ReilVariable var) {
+        this.mContext = mContext;
+        this.bvSize = bvSize;
+        this.z3Engine = z3Engine;
+        this.var = var;
+    }
+
     public BoolExpr sPred(BitVecExpr addr, BitVecExpr v3, BoolExpr v4, BoolExpr v5) {
         try {
             BitVecSort bv = mContext.mkBitVecSort(bvSize);

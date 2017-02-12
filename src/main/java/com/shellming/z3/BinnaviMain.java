@@ -13,6 +13,7 @@ import com.google.security.zynamics.binnavi.Database.Exceptions.InvalidDatabaseE
 import com.google.security.zynamics.binnavi.Database.Exceptions.InvalidDatabaseVersionException;
 import com.google.security.zynamics.binnavi.config.ConfigManager;
 import com.google.security.zynamics.binnavi.config.DatabaseConfigItem;
+import com.microsoft.z3.Global;
 
 import java.util.*;
 
@@ -42,6 +43,9 @@ public class BinnaviMain {
         db.load();
         Database apiDatabase = new Database(db);
         List<Module> modules = apiDatabase.getModules();
+        Global.setParameter("fixedpoint.engine", "pdr");
+//            Global.setParameter("fixedpoint.unbound_compressor", "false");
+        Global.setParameter("pp.bv-literals", "false");
         for (Module module : modules) {
             module.load();
             Map<Long, String> addr2fun = new HashMap<Long, String>();
@@ -51,6 +55,7 @@ public class BinnaviMain {
                 addr2fun.put(address.toLong() << 8, f.getName());
                 ReilFunction reilFunction = f.getReilCode();
                 System.out.println("function :" + f.getName());
+                RFunction rFunction = new RFunction(f);
 //                System.out.println("native code start:");
 //                List<BasicBlock> nodes = f.getGraph().getNodes();
 //                for (BasicBlock node : nodes) {
@@ -67,17 +72,12 @@ public class BinnaviMain {
                 Set<String> regs = new HashSet<>();
                 for (ReilBlock node : reilNodes) {
                     List<ReilInstruction> rInstructions = node.getInstructions();
+                    for (int i = 0; i < rInstructions.size(); i++) {
+                        ReilInstruction instruction = rInstructions.get(i);
+                    }
                     for (ReilInstruction rInstruction : rInstructions) {
                         ReilOperand operand = rInstruction.getSecondOperand();
-                        System.out.println(rInstruction);
-                        System.out.println(rInstruction.getMnemonic());
-                        OperandSize s = operand.getSize();
-                        if (operand.getType() == OperandType.REGISTER) {
-                            String name = operand.toString();
-                            regs.add(name);
-                        } else if (operand.getType() == OperandType.INTEGER_LITERAL) {
-                            System.out.println("value:" + operand.getValue());
-                        }
+
 //                        System.out.println(rInstruction.toString());
                     }
                 }

@@ -51,7 +51,6 @@ public class ReilInstructionAnalysis {
         ReilOperand op3 = instruction.getThirdOperand();
 
         String f = function.getFunName();
-        int regNums = function.getRegNums();
         int size = engine.getBvSize();
         BoolExpr h, b;
         BitVecExpr v1, v2, v3;
@@ -506,11 +505,11 @@ public class ReilInstructionAnalysis {
                 if (op3.getType() == OperandType.REGISTER) {
                     jump = null;  // 目标地址为寄存器，无法确定具体值，直接执行下一条
                 } else if (op3.getType() == OperandType.INTEGER_LITERAL) {
-                    simV3 = Long.valueOf(op2.getValue());
+                    simV3 = Long.valueOf(op3.getValue());
                     jump = simV3 << 8;
                 } else { // 操作数类型为偏移值，此时计算指令偏移
                     // 偏移值一般以 指令地址.偏移值 的格式存储
-                    String a = op2.getValue();
+                    String a = op3.getValue();
                     String[] parts = a.split("\\.");
                     Long a1 = Long.valueOf(parts[0]);
                     Long a2 = Long.valueOf(parts[1]);

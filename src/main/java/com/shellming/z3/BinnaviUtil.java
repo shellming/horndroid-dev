@@ -101,4 +101,11 @@ public class BinnaviUtil {
         }
         return instructions;
     }
+
+    public static List<ReilBlock> getBlocks(Function function) throws com.google.security.zynamics.binnavi.API.disassembly.CouldntLoadDataException, InternalTranslationException {
+        function.load();
+        ReilFunction fun = function.getReilCode();
+        List<ReilBlock> reilNodes = fun.getGraph().getNodes();
+        return reilNodes;
+    }
 }
